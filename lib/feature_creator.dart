@@ -4,7 +4,7 @@ import 'package:recase/recase.dart';
 
 void createFeature() {
   stdout.write('Enter feature name: ');
-  final featureName = stdin.readLineSync()?.trim()?.snakeCase;
+  final featureName = stdin.readLineSync()?.trim().snakeCase;
   if (featureName == null || featureName.isEmpty) {
     print('Feature name is required.');
     return;

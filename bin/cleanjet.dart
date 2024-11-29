@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:args/args.dart';
 import 'package:cleanjet/initializer.dart';
 import 'package:cleanjet/feature_creator.dart';

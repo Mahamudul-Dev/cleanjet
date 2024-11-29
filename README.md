@@ -10,11 +10,11 @@
 - Create new features with a predefined structure.
 
 ## Installation
-
+Create a Flutter project first, then continue with the following steps:
 To install **Cleanjet**, run:
 
 ```bash
-dart pub global activate cleanjet
+dart pub add cleanjet -- dev
 ```
 
 ## Usage
@@ -22,7 +22,7 @@ Initialize a New Project
 To initialize a new Flutter project, run:
 
 ```bash
-cleanjet init
+dart run cleanjet init
 ```
 
 
@@ -35,7 +35,7 @@ You will be prompted to provide:
 To generate a new feature within the project, run:
 
 ```bash
-cleanjet create feature
+dart run cleanjet create feature
 ```
 
 ## Project Structure

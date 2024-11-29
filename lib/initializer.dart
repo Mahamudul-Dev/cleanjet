@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'package:cleanjet/constants.dart';
 import 'package:recase/recase.dart';
+import 'package:yaml_edit/yaml_edit.dart';
 
 void initializeProject() {
   stdout.write('Enter project name: ');
@@ -13,37 +15,15 @@ void initializeProject() {
   final snakeCaseAppName = projectName.snakeCase;
 
   stdout.write('Enter initial feature name (optional): ');
-  final featureName = stdin.readLineSync()?.trim()?.snakeCase;
+  final featureName = stdin.readLineSync()?.trim().snakeCase;
 
   // Create Flutter project (override)
   print('Initializing Flutter project...');
   Process.runSync('flutter', ['create', '.'], workingDirectory: Directory.current.path);
 
   // Add dependencies
-  print('Adding dependencies...');
-  Process.runSync('flutter', ['pub', 'add', ...[
-    'bloc', 'flutter_bloc', 'go_router', 'meta', 'equatable', 'get_it',
-    'intl', 'dio', 'retrofit', 'logger', 'json_annotation',
-    'flutter_hooks', 'cached_network_image', 'google_fonts',
-  ]]);
-
-  Process.runSync('flutter', ['pub', 'add', ...[
-    'retrofit_generator', 'build_runner', 'json_serializable'
-  ], '--dev']);
-
-  // Remove comments and update `pubspec.yaml`
-  print('Updating pubspec.yaml...');
-  final pubspec = File('pubspec.yaml');
-  final updatedPubspec = pubspec.readAsStringSync()
-      .replaceAll(RegExp(r'#.*'), '') // Remove comments
-      .replaceAll('flutter:', '''
-flutter:
-  assets:
-    - images/
-    - icons/
-    - audios/
-''');
-  pubspec.writeAsStringSync(updatedPubspec);
+  addDependencies(Constants.dependencies);
+  addDevDependencies(Constants.devDependencies);
 
   // Create directories
   print('Creating project structure...');
@@ -70,9 +50,12 @@ flutter:
     'lib/src/features/${featureName ?? ''}/presentation/widgets',
   ]);
 
+  updatePubspec();
+
   // Create initial files
   print('Generating boilerplate code...');
   createFile('lib/main.dart', generateMainDart(snakeCaseAppName));
+  createFile('test/widget_test.dart', generateTestDart());
   createFile('lib/src/$snakeCaseAppName.dart', generateAppDart(pascalCaseAppName));
   createFile('lib/config/config.dart', generateConfigDart(pascalCaseAppName));
   createFile('lib/config/routes/app_routes.dart', generateAppRoutesDart());
@@ -82,11 +65,99 @@ flutter:
   print('Project initialization complete!');
 }
 
+
+void updatePubspec() {
+  print('Updating pubspec.yaml...');
+  final pubspecFile = File('pubspec.yaml');
+
+  if (!pubspecFile.existsSync()) {
+    print('Error: pubspec.yaml not found!');
+    return;
+  }
+
+  try {
+    // Read the original content
+    final content = pubspecFile.readAsStringSync();
+
+    // Remove all comments and clean gaps
+    final cleanedContent = _removeCommentsAndGaps(content);
+
+    // Parse the cleaned YAML content
+    final editor = YamlEditor(cleanedContent);
+
+    // Define the assets configuration
+    const flutterConfig = {
+      'assets': [
+        'assets/images/',
+        'assets/icons/',
+        'assets/audios/',
+        'assets/fonts/',
+        'assets/translations/',
+      ]
+    };
+
+    // Add or update the `flutter` section
+    editor.update(['flutter'], flutterConfig);
+  
+    // Write the updated content back to the file
+    pubspecFile.writeAsStringSync(editor.toString());
+    print('pubspec.yaml updated successfully!');
+  } catch (e) {
+    print('Error updating pubspec.yaml: $e');
+  }
+}
+
+// Helper function to remove comments and extra gaps
+String _removeCommentsAndGaps(String yamlContent) {
+  final lines = yamlContent.split('\n');
+
+  // Filter out lines with comments and empty spaces
+  final cleanedLines = lines.where((line) {
+    final trimmed = line.trim();
+    return trimmed.isNotEmpty && !trimmed.startsWith('#');
+  });
+
+  // Rejoin cleaned lines into a single YAML string
+  return cleanedLines.join('\n');
+}
+
+
+void addDependencies(List<String> dependencies) async {
+  for (var dependency in dependencies) {
+    try {
+      print('Adding $dependency...');
+      var result = await Process.run('flutter', ['pub', 'add', dependency]);
+      if (result.exitCode == 0) {
+        print('Successfully added $dependency');
+      } else {
+        print('Error adding $dependency: ${result.stderr}');
+      }
+    } catch (e) {
+      print('Failed to add $dependency: $e');
+    }
+  }
+}
+
+void addDevDependencies(List<String> devDependencies) async {
+  for (var devDependency in devDependencies) {
+    try {
+      print('Adding $devDependency as a dev dependency...');
+      var result = await Process.run('flutter', ['pub', 'add', devDependency, '--dev']);
+      if (result.exitCode == 0) {
+        print('Successfully added $devDependency');
+      } else {
+        print('Error adding $devDependency: ${result.stderr}');
+      }
+    } catch (e) {
+      print('Failed to add $devDependency: $e');
+    }
+  }
+}
+
 String generateAppDart(String appName) => '''
 import 'package:flutter/material.dart';
 
 import '../config/config.dart';
-import '../config/theme/theme.dart';
 
 class ${appName.pascalCase} extends StatelessWidget {
   const ${appName.pascalCase}({super.key});
@@ -123,7 +194,7 @@ class RouteModel {
 }
 
 class AppRoutes {
-  // Example: static const String home = '/home';
+  // Example: static const RouteModel home = RouteModel(name: 'home', path: '/home');
 }
 ''';
 
@@ -183,5 +254,12 @@ void main() {
   runApp(const ${appName.pascalCase}());
 }
 ''';
+
+String generateTestDart() => '''
+void main() {
+  // Write your test code here
+}
+''';
+
 
 // Add other `generate*` methods for boilerplate code...
